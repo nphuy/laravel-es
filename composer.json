@@ -1,5 +1,6 @@
 {
   "name": "hnp/laravel-es",
+  "license": "MIT",
   "authors": [
     {
       "name": "Huy Nguyen",
