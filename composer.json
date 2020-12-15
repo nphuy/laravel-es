@@ -1,0 +1,10 @@
+{
+    "name": "huynp/laravel-es",
+    "authors": [
+        {
+            "name": "Huy Nguyen",
+            "email": "huynp@protonmail.com"
+        }
+    ],
+    "require": {}
+}
