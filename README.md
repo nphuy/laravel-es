@@ -1,6 +1,6 @@
-# Laravel-Elasticsearch
+# Laravel ES
 
-An easy way to use the [official Elastic Search client](https://github.com/elastic/elasticsearch-php) in your Laravel applications.
+An easy way to use Elasticsearch in your Laravel applications.
 
 ## Installation and Configuration
 
