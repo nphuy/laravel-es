@@ -7,7 +7,7 @@ An easy way to use Elasticsearch in your Laravel applications.
 Install via composer:
 
 ```sh
-composer require hnp/laravel-es
+composer require hnp/laravel-es "dev-master"
 ```
 
 The package's service provider will automatically register its service provider.
