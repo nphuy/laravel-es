@@ -3,110 +3,207 @@ namespace HNP\LaravelES\Traits;
 use Elasticquent\ElasticquentTrait;
 use Illuminate\Support\Facades\Log;
 use HNP\LaravelES\Collections\ESCollection;
+use Elasticsearch\ClientBuilder;
+use  HNP\LaravelES\LaravelESObserver;
 
 trait LaravelES
 {
-    use ElasticquentTrait;
-
     public static function bootLaravelES()
 	{
-        static::observe(app(\HNP\LaravelES\LaravelESObserver::class));
+        static::observe(app(LaravelESObserver::class));
     }
-    
-    function getIndexName()
-    {
-        return 'hnp';
+    private function getIndexName(){
+        return $this->es_index_name ? $this->es_index_name : $this->getTable();
     }
-    // protected $indexSettings = [
-    //     'analysis' => [
-    //         'char_filter' => [
-    //             'replace' => [
-    //                 'type' => 'mapping',
-    //                 'mappings' => [
-    //                     '&=> and '
-    //                 ],
-    //             ],
-    //         ],
-    //         'filter' => [
-    //             'word_delimiter' => [
-    //                 'type' => 'word_delimiter',
-    //                 'split_on_numerics' => false,
-    //                 'split_on_case_change' => true,
-    //                 'generate_word_parts' => true,
-    //                 'generate_number_parts' => true,
-    //                 'catenate_all' => true,
-    //                 'preserve_original' => true,
-    //                 'catenate_numbers' => true,
-    //             ]
-    //         ],
-    //         'analyzer' => [
-    //             'default' => [
-    //                 'type' => 'custom',
-    //                 'char_filter' => [
-    //                     'html_strip',
-    //                     'replace',
-    //                 ],
-    //                 'tokenizer' => 'whitespace',
-    //                 'filter' => [
-    //                     'lowercase',
-    //                     'word_delimiter',
-    //                 ],
-    //             ],
-    //         ],
-    //     ],
-    // ];
-    public static function searchByQuery($query = null, $aggregations = null, $sourceFields = null, $limit = null, $offset = null, $sort = null)
-    {
+    private function getSearchField(){
+        return $this->es_search_fields ? $this->es_search_fields : [];
+    }
+    private function getClient(){
+        $hosts =  config('hnp_es.hosts');
+        // dd($hosts);
+        $client = ClientBuilder::create()
+        ->setHosts($hosts)
+        ->build();
+        return $client;
+    }
+    public static function createIndex(){
         $instance = new static;
+        $client = $instance->getClient();
+        $index = $instance->getIndexName();
+        $settings = $instance->getSettings();
+        $mappings = $instance->getMappings();
+        // dd($mappings);
+        $params = [
+            'index' => $index,
+            'body'  => [
+                'settings' => $settings,
+                "mappings"=>$mappings
+            ]
+        ];
+        $response = $client->indices()->create($params);
+        return $response;
+        dd($params);
+    }
+    private function getSettings(){
+        $settings = $this->es_settings;
+        if(empty($settings) || !is_array($settings)){
+            return [
+                'number_of_shards' => 1,
+                'number_of_replicas' => 0,
+                'analysis'=>[
+                    "analyzer"=>[
+                        "hnp_analyzer"=>[
+                            "filter"=>["icu_folding"],
+                            "char_filter"=>["html_strip"],
+                            "tokenizer"=>"icu_tokenizer"
+                        ],
+                        "default"=>[
+                            "filter"=>[
+                                "lowercase",
+                                "word_delimiter"
+                            ],
+                            "char_filter"=>[
+                                "html_strip",
+                                "replace"
+                            ],
+                            "type"=>"custom",
+                            "tokenizer"=>"whitespace"
+                        ]
+                    ],
+                        "char_filter"=>[
+                            "replace"=>[
+                                "type"=>"mapping",
+                                "mappings"=>["&=> and "]
+                            ]
+                        ]
+                ],
+                
+            ];
+        }
+        return $settings;
+    }
 
-        $params = $instance->getBasicEsParams(true, $limit, $offset);
+    private function getMappings(){
+        $mappings = $this->es_mappings;
+        if(empty($mappings) || !is_array($mappings)){
+            return [];
+        }
+        return $mappings;
+    }
+    private function getSize(){
+        return !empty($this->es_size) ? $this->es_size : 20;
+    }
+    private function isLimitSearchTime(){
+        return !empty($this->limit_search_time);
+    }
+    public function newCollection(array $models = [])
+    {
+         return new ESCollection($models, self::class);
+    }
+    public function addToIndex(){
+        $instance = new static;
+        $client = $instance->getClient();
+        $index = $instance->getIndexName();
+        $document_data = $this->getIndexDocumentData();
+        $params = [
+            'index' => $index,
+            'id'    => $this->id,
+            'type'=>'_doc'
+        ];
+        $params['body'] = $document_data;
+        
+        $response = $client->index($params);
+        return $response;
+    }
+    public function removeFromIndex(){
+        $instance = new static;
+        $client = $instance->getClient();
+        $index = $instance->getIndexName();
+        $document_data = $this->getIndexDocumentData();
+        $params = [
+            'index' => $index,
+            'id'    => $this->id,
+            'type'=>'_doc'
+        ];
+        
+        $response = $client->delete($params);
+        return $response;
+    }
+    public static function searchWithQuery(Array $query){
+        $instance = new static;
+        $client = $instance->getClient();
+        $index = $instance->getIndexName();
+        $params = [
+            'index' => $index,
+            'body'  => [
+                'size'=>$instance->getSize(),
+                'query' => $query
+            ]
+        ];
+        $response = $client->search($params);
+        $hits = $response['hits']['hits'];
+        $resp = collect($response['hits']['hits']);
+        $ids = $resp->pluck('_id')->toArray();
+        $sources = $resp->pluck('_source')->toArray();
+        return new ESCollection($sources, self::class);
+    }
+    public static function search($key){
+        $instance = new static;
+        $client = $instance->getClient();
+        $index = $instance->getIndexName();
+        $search_fields = $instance->getSearchField();
+        $query = "";
+        if($instance->isLimitSearchTime()){
+            $limit_time = strtotime("-30 days");
+            $query = [
+                'bool'=>[
+                    'must'=>[
+                        'multi_match'=>[
+                            'query'=>$key,
+                            'fields'=>$search_fields,
+                            'type'=>'phrase',
+                            'slop'=>150
+                        ]
+                    ],
+                    'filter'=>[
+                        'range'=>[
+                            'updated_at'=>[
+                                'gte'=>$limit_time
+                            ]
+                        ]
+                    ]
+                ]
+            ];
+        }else{
+            $query = [
+                'multi_match'=>[
+                    'query'=>$key,
+                    'fields'=>$search_fields,
+                    'type'=>'phrase',
+                    'slop'=>150
+                ]
+            ];
+        }
+        // dd($query);
+        // dd($limit_time);
+        $params = [
+            'index' => $index,
+            'body'  => [
+                'size'=>$instance->getSize(),
+                'query' => $query
+            ]
+        ];
         // dd($params);
-        if (!empty($sourceFields)) {
-            $params['body']['_source']['include'] = $sourceFields;
-        }
-
-        if (!empty($query)) {
-            $params['body']['query'] = $query;
-        }
-
-        if (!empty($aggregations)) {
-            $params['body']['aggs'] = $aggregations;
-        }
-
-        if (!empty($sort)) {
-            $params['body']['sort'] = $sort;
-        }
-        
-        $result = $instance->getElasticSearchClient()->search($params);
-        // dd($instance->getElasticSearchClient());
-        return static::hydrateElasticsearchResult($result);
-    }
-
-    public function getSearchField(){
-        return ['content', 'title'];
-    }
-    public function getIndexDocumentData(){
-        return $this->toArray();
-    }
-    public function newElasticquentResultCollection(array $models = [], $meta = null)
-    {
-         return new ESCollection($models, $meta);
-    }
-    public static function quick_search($key){
-        
-        $instance = new static;
-        
-        $fields = $instance->getSearchField();
-        // dd($fields, ['title','content']);
-        // unset($fields['id']);
-        $match = array('multi_match' => array('query' => $key, "type"=> "phrase",
-        "slop"=> 150));
-        $match['multi_match']['fields'] = array_values($fields);
-
-        $filter = ['range' => ['created_at' => ['gt' => strtotime("-30 days")]]];
-        $args = ['bool'=>['should'=>$match, 'filter'=>$filter]];
-        // dd($args);
-        // dd([$fields]);
-        return $instance->searchByQuery($args, null, null, 1440);
+        $response = $client->search($params);
+        $hits = $response['hits']['hits'];
+        // dd($hits);
+        $resp = collect($response['hits']['hits']);
+        $ids = $resp->pluck('_id')->toArray();
+        $sources = $resp->pluck('_source')->toArray();
+        return new ESCollection($sources, self::class);
+        $imploded_strings = implode(',', $ids);
+        $model = self::class;
+        // dd($model::whereIn('id', $ids)->orderByRaw(\DB::raw("FIELD(id, $imploded_strings)"))->get());
+        return $model::whereIn('id', $ids)->orderByRaw(\DB::raw("FIELD(id, $imploded_strings)"))->get();
     }
 }

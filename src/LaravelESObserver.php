@@ -10,11 +10,21 @@ class LaravelESObserver{
 
     public function created(Model $model)
     {
-        AddES::dispatch($model);
+        if(config('hnp_es.queue', false)){
+            AddES::dispatch($model);
+        }else{
+            $model->addToIndex();
+        }
+        
     }
     public function updated(Model $model)
     {
-        UpdateES::dispatch($model);
+        if(config('hnp_es.queue', false)){
+            UpdateES::dispatch($model);
+        }else{
+            $model->addToIndex();
+        }
+        
     }
     public function deleting(Model $model)
     {
