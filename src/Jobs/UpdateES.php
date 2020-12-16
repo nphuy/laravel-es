@@ -31,11 +31,6 @@ class UpdateES implements ShouldQueue
     public function handle()
     {
         $model = $this->model;
-        try{
-            $model->updateIndex();
-        }catch(\Elasticsearch\Common\Exceptions\Missing404Exception $e){
-            $model->addToIndex();
-
-        }
+        $model->addToIndex();
     }
 }
