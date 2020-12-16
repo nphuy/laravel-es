@@ -1,5 +1,6 @@
 {
   "name": "hnp/laravel-es",
+  "description": "An easy way to use Elasticsearch in your Laravel applications.",
   "license": "MIT",
   "authors": [
     {
