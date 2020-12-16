@@ -56,6 +56,21 @@ function getIndexDocumentData()
 }
 ```
 
+## Create an index
+
+Add **es_settings** and **es_mappings** property to your model.
+
+```php
+    protected $es_settings = [];
+    protected $es_mappings = [];
+```
+
+Let's add a new index with some custom settings:
+
+```php
+    YourModel::createIndex();
+```
+
 ## Usage
 
 ```php
