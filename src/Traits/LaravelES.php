@@ -44,6 +44,16 @@ trait LaravelES
         return $response;
         dd($params);
     }
+    public static function deleteIndex(){
+        $instance = new static;
+        $client = $instance->getClient();
+        $index = $instance->getIndexName();
+        $deleteParams = [
+            'index' => $index
+        ];
+        $response = $client->indices()->delete($deleteParams);
+        return $response;
+    }
     private function getSettings(){
         $settings = $this->es_settings;
         if(empty($settings) || !is_array($settings)){

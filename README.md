@@ -41,7 +41,7 @@ class YourModel extends Model
 }
 ```
 
-You should add method getIndexDocumentData and es_search_fields property to your model.
+You should add method **getIndexDocumentData** and **es_search_fields** property to your model.
 
 ```php
 protected $es_search_fields = ["field1", "field2"];
@@ -71,6 +71,24 @@ Let's add a new index with some custom settings:
     YourModel::createIndex();
 ```
 
+## Delete an index
+
+```php
+    YourModel::deleteIndex();
+```
+
+## Index a document
+
+```php
+   $model->addToIndex();
+```
+
+## Remove index a document
+
+```php
+   $model->removeFromIndex();
+```
+
 ## Usage
 
 ```php
@@ -91,3 +109,7 @@ $results = YourModel::searchWithQuery($query);
 //Get query builder from result
 $query = $results->query();
 ```
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
