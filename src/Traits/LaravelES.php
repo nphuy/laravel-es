@@ -157,7 +157,7 @@ trait LaravelES
         $sources = $resp->pluck('_source')->toArray();
         return new ESCollection($sources, self::class);
     }
-    public static function search($key){
+    public static function search($key, $size = null){
         $instance = new static;
         $client = $instance->getClient();
         $index = $instance->getIndexName();
@@ -196,10 +196,11 @@ trait LaravelES
         }
         // dd($query);
         // dd($limit_time);
+        $s_size = !empty((int) $size) ? (int) $size : $instance->getSize();
         $params = [
             'index' => $index,
             'body'  => [
-                'size'=>$instance->getSize(),
+                'size'=>$s_size,
                 'query' => $query
             ]
         ];
