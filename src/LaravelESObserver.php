@@ -28,7 +28,12 @@ class LaravelESObserver{
     }
     public function deleting(Model $model)
     {
-        $model->removeFromIndex();
+        try{
+            $model->removeFromIndex();
+        }catch(\Exception $e){
+
+        }
+        
         // RemoveES::dispatch($model);
     }
 }
