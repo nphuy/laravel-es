@@ -15,8 +15,12 @@ class LaravelESObserver
     public function saved(Model $model)
     {
         Log::info('LaravelESObserver: saved');
-        if ($model->allowIndex()) {
 
+        if ($model->allowIndex()) {
+            try {
+                $model->removeFromIndex();
+            } catch (\Exception $e) {
+            }
             if (config('hnp_es.queue', false)) {
                 AddES::dispatch($model);
             } else {
