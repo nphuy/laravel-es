@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use HNP\LaravelES\Jobs\AddES;
 use HNP\LaravelES\Jobs\UpdateES;
 use HNP\LaravelES\Jobs\RemoveES;
+// import Log facade
+use Illuminate\Support\Facades\Log;
 
 class LaravelESObserver
 {
@@ -13,6 +15,7 @@ class LaravelESObserver
     public function saved(Model $model)
     {
         if ($model->allowIndex()) {
+            Log::info('LaravelESObserver: saved');
             if (config('hnp_es.queue', false)) {
                 AddES::dispatch($model);
             } else {
