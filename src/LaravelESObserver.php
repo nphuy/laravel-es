@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\Log;
 class LaravelESObserver
 {
 
-    public function created(Model $model)
+    public function saved(Model $model)
     {
-        Log::info('LaravelESObserver: created');
+        Log::info('LaravelESObserver: saved');
         if ($model->allowIndex()) {
 
             if (config('hnp_es.queue', false)) {
@@ -24,17 +24,17 @@ class LaravelESObserver
             }
         }
     }
-    public function updated(Model $model)
-    {
-        Log::info('LaravelESObserver: updated');
-        if ($model->allowIndex()) {
-            if (config('hnp_es.queue', false)) {
-                UpdateES::dispatch($model);
-            } else {
-                $model->addToIndex();
-            }
-        }
-    }
+    // public function updated(Model $model)
+    // {
+    //     Log::info('LaravelESObserver: updated');
+    //     if ($model->allowIndex()) {
+    //         if (config('hnp_es.queue', false)) {
+    //             UpdateES::dispatch($model);
+    //         } else {
+    //             $model->addToIndex();
+    //         }
+    //     }
+    // }
     public function deleting(Model $model)
     {
         Log::info('LaravelESObserver: deleting');
