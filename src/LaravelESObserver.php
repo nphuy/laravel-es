@@ -18,7 +18,9 @@ class LaravelESObserver
 
         if ($model->allowIndex()) {
             try {
+
                 $model->removeFromIndex();
+                Log::info('LaravelESObserver: removeFromIndex', $model->toArray());
             } catch (\Exception $e) {
             }
             if (config('hnp_es.queue', false)) {
