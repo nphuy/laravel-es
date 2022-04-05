@@ -125,6 +125,22 @@ trait LaravelES
     {
         return new ESCollection($models, self::class);
     }
+    public function updateIndex()
+    {
+        $instance = new static;
+        $client = $instance->getClient();
+        $index = $instance->getIndexName();
+        $document_data = $this->getIndexDocumentData();
+        $params = [
+            'index' => $index,
+            'id'    => $this->id,
+            'type' => '_doc'
+        ];
+        $params['body'] = $document_data;
+
+        $response = $client->update($params);
+        return $response;
+    }
     public function addToIndex()
     {
         $instance = new static;
